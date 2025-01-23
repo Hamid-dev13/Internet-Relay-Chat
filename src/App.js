@@ -1,165 +1,166 @@
 import React, { useEffect, useState } from "react";
-import socket from "./socket";  // Assure-toi que tu as bien ton fichier socket.js
+import socket from "./socket"; // Assurez-vous que ce fichier initialise correctement la connexion WebSocket
 
-function App() {
-  const [message, setMessage] = useState("");  // Message à envoyer
-  const [chat, setChat] = useState([]);  // Liste des messages reçus
-  const [roomName, setRoomName] = useState("");  // Room à créer ou rejoindre
-  const [isInRoom, setIsInRoom] = useState(false);  // Vérifier si l'utilisateur est dans une room
-  const [userName, setUserName] = useState("");  // Pseudo de l'utilisateur
-  const [isNameSet, setIsNameSet] = useState(false);  // Vérifier si l'utilisateur a défini un pseudo
-  const [users, setUsers] = useState([]);  // Liste des utilisateurs dans la room
-
+const App = () => {
+  const [message, setMessage] = useState("");
+  const [chat, setChat] = useState([]);
+  const [roomName, setRoomName] = useState("");
+  const [isInRoom, setIsInRoom] = useState(false);
+  const [userName, setUserName] = useState("");
+  const [isNameSet, setIsNameSet] = useState(false);
+  const [usersConnected, setUsersConnected] = useState([]); 
+  
   useEffect(() => {
+    // Gestion des messages entrants
     socket.on("message", (data) => {
-      setChat((prevChat) => [...prevChat, data]); // Afficher les messages
+      setChat((prevChat) => [...prevChat, data]);
     });
-
-    // Ecoute des utilisateurs dans la room
-    socket.on("usersList", (usersInRoom) => {
-      setUsers(usersInRoom);  // Mettre à jour la liste des utilisateurs
+    socket.on('usersConnected', (users)=> {
+      setUsersConnected(users);
     });
-
     return () => {
       socket.off("message");
-      socket.off("usersList");  // Nettoyage de l'écouteur
+      socket.off("usersConnected");
     };
   }, []);
 
-  // Fonction pour envoyer un message et gérer les commandes
+
+  
   const sendMessage = () => {
-    if (message.trim() !== "") {
-      if (message.startsWith("/createRoom")) {
-        const room = message.split(" ")[1];
-        if (room) {
-          socket.emit("createRoom", room);
-          setRoomName(room);
-          setIsInRoom(true);
-          setChat((prevChat) => [
-            ...prevChat,
-            { userName: "System", message: `Vous avez créé la room '${room}' !` },
-          ]);
-          setMessage("");
-        } else {
-          setChat((prevChat) => [...prevChat, "Erreur: veuillez spécifier un nom de room."]);
-        }
-      } else if (message.startsWith("/joinRoom")) {
-        const room = message.split(" ")[1];
-        if (room) {
-          socket.emit("joinRoom", room);
-          setRoomName(room);
-          setIsInRoom(true);
-          setChat((prevChat) => [
-            ...prevChat,
-            { userName: "System", message: `Vous avez rejoint la room '${room}' !` },
-          ]);
-          socket.emit("getUsers", room); // Demander la liste des utilisateurs
-          setMessage("");
-        } else {
-          setChat((prevChat) => [...prevChat, "Erreur: veuillez spécifier une room à rejoindre."]);
-        }
-      } else if (message.startsWith("/users")) {
-        const room = roomName; // Utilise la room actuelle
-        if (room) {
-          socket.emit("getUsers", room); // Envoie la requête pour obtenir la liste des utilisateurs
-        }
+    if (!message.trim()) return;
+
+    if (message.startsWith("/createRoom")) {
+      const room = message.split(" ")[1];
+      if (room) {
+        socket.emit("createRoom", room);
+        setRoomName(room);
+        setIsInRoom(true);
+        setChat((prevChat) => [
+          ...prevChat,
+          { userName: "System", message: `Vous avez créé la room '${room}' !` },
+        ]);
         setMessage("");
       } else {
-        if (roomName.trim() !== "") {
-          socket.emit("sendMessage", { room: roomName, message, userName });
-          setMessage("");
-        }
+        alert("Erreur : veuillez spécifier un nom pour la room.");
       }
+    } else if (message.startsWith("/joinRoom")) {
+      const room = message.split(" ")[1];
+      if (room) {
+        socket.emit("joinRoom", room);
+        setRoomName(room);
+        setIsInRoom(true);
+        setChat((prevChat) => [
+          ...prevChat,
+          { userName: "System", message: `Vous avez rejoint la room '${room}' !` },
+        ]);
+        setMessage("");
+      } else {
+        alert("Erreur : veuillez spécifier une room à rejoindre.");
+      }
+    } else if (isInRoom) {
+      // Envoi de message dans la room
+      socket.emit("sendMessage", { room: roomName, message, userName });
+      setMessage("");
+    } else {
+      alert("Veuillez rejoindre une room avant d'envoyer un message.");
     }
   };
 
-  // Fonction pour définir le pseudo de l'utilisateur
-  const setUserNameHandler = () => {
-    if (userName.trim() !== "") {
-      setIsNameSet(true);  // Le pseudo est défini
+  const handleUserName = () => {
+    if (userName.trim()) {
+      setIsNameSet(true);
+      socket.emit("setUserName", userName); // Envoie le pseudo au serveur
     } else {
-      alert("Veuillez entrer un pseudo.");
+      alert("Veuillez entrer un pseudo valide.");
     }
   };
+  
 
   return (
     <div style={{ padding: "20px" }}>
       <h1>💬 Chat WebSocket</h1>
 
-      {/* Étape pour définir le pseudo */}
-      {!isNameSet && (
+      {!isNameSet ? (
+        // Étape pour définir le pseudo
         <div>
           <input
             type="text"
             value={userName}
             onChange={(e) => setUserName(e.target.value)}
-            placeholder="Choisissez un pseudo"
+            placeholder="Entrez votre pseudo"
             style={{ width: "80%", marginRight: "10px" }}
           />
-          <button onClick={setUserNameHandler}>Définir le pseudo</button>
+          <button onClick={handleUserName}>Confirmer le pseudo</button>
         </div>
-      )}
-
-      {/* Afficher la liste des utilisateurs */}
-      {isInRoom && users.length > 0 && (
-        <div>
-          <h3>Utilisateurs dans la room '{roomName}':</h3>
-          <ul>
-            {users.map((user, index) => (
-              <li key={index}>{user}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Champ pour entrer le nom de la room */}
-      {isNameSet && !isInRoom && (
-        <div>
-          <input
-            type="text"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Tapez /createRoom <nom de la room> ou /joinRoom <nom de la room>"
-            style={{ width: "80%", marginRight: "10px" }}
-          />
-          <button onClick={sendMessage}>Envoyer</button>
-        </div>
-      )}
-
-      <div
-        style={{
-          border: "1px solid #ccc",
-          padding: "10px",
-          height: "300px",
-          overflowY: "scroll",
-          marginBottom: "20px",
-        }}
-      >
-        {chat.map((msg, index) => {
-          console.log(msg); // Affiche msg dans la console pour vérifier sa structure
-          return (
-            <p key={index}>
-              <strong>{msg.userName}</strong>: {msg.message}
-            </p>
-          );
-        })}
-      </div>
-
-      {/* Input pour envoyer un message lorsque dans une room */}
+      ) : (
+        <>
+         {/* Liste des utilisateurs connectés */}
       {isInRoom && (
         <div>
-          <input
-            type="text"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Tapez votre message..."
-            style={{ width: "80%", marginRight: "10px" }}
-          />
-          <button onClick={sendMessage}>Envoyer</button>
+          <h3>Utilisateurs connectés dans {roomName} :</h3>
+          <div
+            style={{
+              border: "1px solid #ccc",
+              padding: "10px",
+              height: "150px",
+              overflowY: "scroll",
+              marginBottom: "20px",
+            }}
+          >
+            {usersConnected.map((user, index) => (
+              <p key={index}>👤 {user}</p>
+            ))}
+          </div>
         </div>
+      )}
+          {/* Affichage de la room ou options de création/rejoindre */}
+          {!isInRoom ? (
+            <div>
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Tapez /createRoom <nom> ou /joinRoom <nom>"
+                style={{ width: "80%", marginRight: "10px" }}
+              />
+              <button onClick={sendMessage}>Envoyer</button>
+            </div>
+          ) : (
+            <>
+              {/* Historique des messages */}
+              <div
+                style={{
+                  border: "1px solid #ccc",
+                  padding: "10px",
+                  height: "300px",
+                  overflowY: "scroll",
+                  marginBottom: "20px",
+                }}
+              >
+                {chat.map((msg, index) => (
+                  <p key={index}>
+                    <strong>{msg.userName}:</strong> {msg.message}
+                  </p>
+                ))}
+              </div>
+
+              {/* Envoi d'un message */}
+              <div>
+                <input
+                  type="text"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Tapez un message..."
+                  style={{ width: "80%", marginRight: "10px" }}
+                />
+                <button onClick={sendMessage}>Envoyer</button>
+              </div>
+            </>
+          )}
+        </>
       )}
     </div>
   );
-}
+};
 
 export default App;
