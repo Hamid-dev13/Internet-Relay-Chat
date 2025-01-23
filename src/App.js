@@ -9,23 +9,31 @@ const App = () => {
   const [userName, setUserName] = useState("");
   const [isNameSet, setIsNameSet] = useState(false);
   const [usersConnected, setUsersConnected] = useState([]); 
-  
+
   useEffect(() => {
     // Gestion des messages entrants
     socket.on("message", (data) => {
       setChat((prevChat) => [...prevChat, data]);
     });
-    socket.on('usersConnected', (users)=> {
+    socket.on("usersConnected", (users) => {
       setUsersConnected(users);
+    });
+    socket.on("roomCreated", (room) => {
+      // Quand une room est créée, mettre à jour la liste des utilisateurs
+      setRoomName(room);
+      setIsInRoom(true);
+      setChat((prevChat) => [
+        ...prevChat,
+        { userName: "System", message: `La room '${room}' a été créée et vous y êtes !` },
+      ]);
     });
     return () => {
       socket.off("message");
       socket.off("usersConnected");
+      socket.off("roomCreated");
     };
   }, []);
 
-
-  
   const sendMessage = () => {
     if (!message.trim()) return;
 
@@ -33,8 +41,7 @@ const App = () => {
       const room = message.split(" ")[1];
       if (room) {
         socket.emit("createRoom", room);
-        setRoomName(room);
-        setIsInRoom(true);
+        // Les autres utilisateurs devraient être informés de la création de la room
         setChat((prevChat) => [
           ...prevChat,
           { userName: "System", message: `Vous avez créé la room '${room}' !` },
@@ -74,7 +81,6 @@ const App = () => {
       alert("Veuillez entrer un pseudo valide.");
     }
   };
-  
 
   return (
     <div style={{ padding: "20px" }}>
@@ -94,25 +100,26 @@ const App = () => {
         </div>
       ) : (
         <>
-         {/* Liste des utilisateurs connectés */}
-      {isInRoom && (
-        <div>
-          <h3>Utilisateurs connectés dans {roomName} :</h3>
-          <div
-            style={{
-              border: "1px solid #ccc",
-              padding: "10px",
-              height: "150px",
-              overflowY: "scroll",
-              marginBottom: "20px",
-            }}
-          >
-            {usersConnected.map((user, index) => (
-              <p key={index}>👤 {user}</p>
-            ))}
-          </div>
-        </div>
-      )}
+          {/* Liste des utilisateurs connectés */}
+          {isInRoom && (
+            <div>
+              <h3>Utilisateurs connectés dans {roomName} :</h3>
+              <div
+                style={{
+                  border: "1px solid #ccc",
+                  padding: "10px",
+                  height: "150px",
+                  overflowY: "scroll",
+                  marginBottom: "20px",
+                }}
+              >
+                {usersConnected.map((user, index) => (
+                  <p key={index}>👤 {user}</p>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Affichage de la room ou options de création/rejoindre */}
           {!isInRoom ? (
             <div>
@@ -162,5 +169,6 @@ const App = () => {
     </div>
   );
 };
+
 
 export default App;

@@ -11,7 +11,13 @@ const setupSocket = (server) => {
     },
   });
 
-
+  // Fonction pour obtenir les utilisateurs dans une room
+  const getUsersInRoom = (room) => {
+    if (rooms[room]) {
+      return rooms[room].map((id) => userNames[id] || id); // Retourne la liste des utilisateurs
+    }
+    return [];
+  };
 
   io.on("connection", (socket) => {
     console.log("Un utilisateur est connecté :", socket.id);
@@ -53,21 +59,25 @@ const setupSocket = (server) => {
       }
     });
 
-    // Création d'une room
-    socket.on("createRoom", (room) => {
-      socket.join(room);
-      console.log(`L'utilisateur ${socket.id} a créé la room ${room}`);
-
+    // Créer une room
+    socket.on('createRoom', (room) => {
+      socket.join(room); // Ajoute le créateur de la room
       if (!rooms[room]) {
-        rooms[room] = [];
+        rooms[room] = []; // Si la room n'existe pas, on l'initialise
       }
-      rooms[room].push(socket.id);
+      rooms[room].push(socket.id); // Ajouter le créateur de la room
+      io.to(room).emit('roomCreated', room); // Envoie un message à tous les utilisateurs dans la room
+      io.to(room).emit('usersConnected', getUsersInRoom(room)); // Met à jour la liste des utilisateurs
+    });
 
-      // Envoi de la liste des utilisateurs présents dans la room après la création
-      const usersInRoom = rooms[room].map(id => userNames[id] || id);  // Utilise le pseudo ou l'ID si pas de pseudo
-      io.to(room).emit("updateUserList", usersInRoom);
-
-      socket.emit("message", `Bienvenue dans la room ${room}`);
+    // Rejoindre une room
+    socket.on('joinRoom', (room) => {
+      socket.join(room);
+      if (!rooms[room]) {
+        rooms[room] = []; // Si la room n'existe pas, on l'initialise
+      }
+      rooms[room].push(socket.id); // Ajouter l'utilisateur à la room
+      io.to(room).emit('usersConnected', getUsersInRoom(room)); // Met à jour la liste des utilisateurs
     });
 
     // Changer le pseudo de l'utilisateur
@@ -89,41 +99,6 @@ const setupSocket = (server) => {
           userName: "System",
           message: `${oldPseudo} a changé son pseudo en ${newPseudo}!`,
         });
-      }
-    });
-
-    // Rejoindre une room
-    socket.on("joinRoom", (data) => {
-      const { room, userName } = data;  // Récupérer directement les infos dans la data
-    
-      console.log(`Reçu joinRoom: ${room} et userName: ${userName}`);
-    
-      if (!rooms[room]) {
-        rooms[room] = [];
-      }
-      rooms[room].push(socket.id);  // Ajouter l'ID de la socket dans la room
-      socket.join(room);
-    
-      // Crée un tableau des pseudos des utilisateurs dans la room
-      const usersInRoom = rooms[room].map((id) => userNames[id] || id);
-    
-      // Log des utilisateurs dans la room
-      console.log("Utilisateurs dans la room avant envoi:", usersInRoom);
-    
-      // Émet la liste des utilisateurs dans la room
-      io.to(room).emit("usersConnected", usersInRoom);
-    });
-    
-
-    // Récupérer la liste des utilisateurs dans une room
-    socket.on('getUsers', (roomName) => {
-      if (rooms[roomName]) {
-        const usersInRoom = rooms[roomName].map(id => {
-          return userNames[id] || id;
-        });
-        io.to(socket.id).emit('usersList', usersInRoom);
-      } else {
-        io.to(socket.id).emit('usersList', []); // Si la room n'existe pas
       }
     });
 
