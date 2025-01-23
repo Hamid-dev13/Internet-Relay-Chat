@@ -123,6 +123,7 @@ const setupSocket = (server) => {
           return;
       }
   
+      // Normalisation des utilisateurs (pour éviter les problèmes de casse)
       const normalizedToUser = toUser.trim().toLowerCase();
       const normalizedFromUser = fromUser.trim().toLowerCase();
   
@@ -141,22 +142,14 @@ const setupSocket = (server) => {
       const recipientSocket = users[normalizedToUser];
   
       if (recipientSocket) {
-          // Envoyer le message au destinataire
+          // Envoyer le message uniquement au destinataire
           recipientSocket.emit("privateMessage", {
               from: fromUser,
               message: message,
               isPrivate: true
           });
   
-          // Envoyer également le message à l'expéditeur
-          socket.emit("privateMessage", {
-              from: fromUser,
-              to: toUser,
-              message: message,
-              isPrivate: true
-          });
-  
-          // Confirmer que le message a bien été envoyé
+          // Confirmer à l'expéditeur que le message a bien été envoyé
           socket.emit("privateMessageStatus", {
               to: toUser,
               status: "sent",
@@ -171,6 +164,8 @@ const setupSocket = (server) => {
           });
       }
   });
+  
+  
   
     // Déconnexion : retirer l'utilisateur de la room et des listes
     socket.on("disconnect", () => {
