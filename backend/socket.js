@@ -26,9 +26,9 @@ const setupSocket = (server) => {
     socket.on("choosePseudo", (pseudo) => {
       userNames[socket.id] = pseudo;  // Enregistrer le pseudo
       users[pseudo] = socket;  // Ajouter l'utilisateur à la liste globale
-
+      console.log(`Pseudo enregistré pour ${socket.id}: ${userNames[socket.id]}`);
       // Émettre l'événement pour notifier le frontend que le pseudo a été choisi
-      io.to(socket.id).emit("updatePseudo", pseudo);
+      io.emit("usersConnected", Object.values(userNames)); 
       console.log(`L'utilisateur ${socket.id} a choisi le pseudo ${pseudo}`);
     });
 

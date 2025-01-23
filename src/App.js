@@ -17,6 +17,7 @@ const App = () => {
     });
     socket.on("usersConnected", (users) => {
       setUsersConnected(users);
+      console.log("Utilisateurs connectés:", users); 
     });
     socket.on("roomCreated", (room) => {
       // Quand une room est créée, mettre à jour la liste des utilisateurs
@@ -72,15 +73,16 @@ const App = () => {
       alert("Veuillez rejoindre une room avant d'envoyer un message.");
     }
   };
-
   const handleUserName = () => {
     if (userName.trim()) {
       setIsNameSet(true);
-      socket.emit("setUserName", userName); // Envoie le pseudo au serveur
+      // Envoie du pseudo au serveur via 'choosePseudo'
+      socket.emit("choosePseudo", userName);
     } else {
       alert("Veuillez entrer un pseudo valide.");
     }
   };
+  
 
   return (
     <div style={{ padding: "20px" }}>
@@ -104,19 +106,12 @@ const App = () => {
           {isInRoom && (
             <div>
               <h3>Utilisateurs connectés dans {roomName} :</h3>
-              <div
-                style={{
-                  border: "1px solid #ccc",
-                  padding: "10px",
-                  height: "150px",
-                  overflowY: "scroll",
-                  marginBottom: "20px",
-                }}
-              >
-                {usersConnected.map((user, index) => (
-                  <p key={index}>👤 {user}</p>
-                ))}
-              </div>
+              <div>
+  
+  {usersConnected.map((user, index) => (
+    <p key={index}>👤 {user}</p>
+  ))}
+</div>
             </div>
           )}
 
@@ -169,6 +164,5 @@ const App = () => {
     </div>
   );
 };
-
 
 export default App;
