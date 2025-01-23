@@ -111,33 +111,67 @@ const setupSocket = (server) => {
       });
     });
 
-    // Envoi de message privé
     socket.on("privateMessage", (data) => {
       const { toUser, message, fromUser } = data;
-    
-      console.log("Tentative d'envoi d'un message privé de", fromUser, "à", toUser);
-    
-      // Vérifier si le destinataire est en ligne
-      const recipientSocket = users[toUser];
-    
-      if (recipientSocket) {
-        recipientSocket.emit("message", {
-          userName: fromUser,
-          message: `Message privé: ${message}`,
-        });
-
-        socket.emit("message", {
-          userName: "System",
-          message: `Votre message privé a été envoyé à ${toUser}.`,
-        });
-      } else {
-        socket.emit("message", {
-          userName: "System",
-          message: `L'utilisateur ${toUser} n'est pas connecté.`,
-        });
+  
+      // Validation des données
+      if (!toUser || !message || !fromUser) {
+          socket.emit("privateMessageStatus", {
+              status: "error",
+              message: "Données invalides"
+          });
+          return;
       }
-    });
-
+  
+      const normalizedToUser = toUser.trim().toLowerCase();
+      const normalizedFromUser = fromUser.trim().toLowerCase();
+  
+      // Empêcher l'auto-envoi
+      if (normalizedToUser === normalizedFromUser) {
+          socket.emit("privateMessageStatus", {
+              status: "error",
+              message: "Vous ne pouvez pas envoyer un message à vous-même."
+          });
+          return;
+      }
+  
+      console.log(`Message privé de ${fromUser} à ${toUser}: ${message}`);
+  
+      // Trouver le socket du destinataire
+      const recipientSocket = users[normalizedToUser];
+  
+      if (recipientSocket) {
+          // Envoyer le message au destinataire
+          recipientSocket.emit("privateMessage", {
+              from: fromUser,
+              message: message,
+              isPrivate: true
+          });
+  
+          // Envoyer également le message à l'expéditeur
+          socket.emit("privateMessage", {
+              from: fromUser,
+              to: toUser,
+              message: message,
+              isPrivate: true
+          });
+  
+          // Confirmer que le message a bien été envoyé
+          socket.emit("privateMessageStatus", {
+              to: toUser,
+              status: "sent",
+              message: `Message envoyé à ${toUser}`
+          });
+      } else {
+          // Informer l'expéditeur que le destinataire est hors ligne
+          socket.emit("privateMessageStatus", {
+              to: toUser,
+              status: "error",
+              message: `${toUser} n'est pas en ligne.`
+          });
+      }
+  });
+  
     // Déconnexion : retirer l'utilisateur de la room et des listes
     socket.on("disconnect", () => {
       console.log("Un utilisateur s'est déconnecté :", socket.id);

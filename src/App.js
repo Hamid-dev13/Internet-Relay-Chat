@@ -9,12 +9,21 @@ const App = () => {
   const [userName, setUserName] = useState("");
   const [isNameSet, setIsNameSet] = useState(false);
   const [usersConnected, setUsersConnected] = useState([]); 
-
+ 
   useEffect(() => {
     // Gestion des messages entrants
     socket.on("message", (data) => {
       setChat((prevChat) => [...prevChat, data]);
     });
+      socket.on("privateMessage", (data) => {
+    setChat((prevChat) => [
+      ...prevChat, 
+      { 
+        userName: `[PRIVÉ] ${data.from}`, 
+        message: data.message 
+      }
+    ]);
+  });
     socket.on("usersConnected", (users) => {
       setUsersConnected(users);
       console.log("Utilisateurs connectés:", users); 
@@ -37,12 +46,28 @@ const App = () => {
 
   const sendMessage = () => {
     if (!message.trim()) return;
-
+  
+    if (message.startsWith("/msg")) {
+      const [, toUser, ...privateMessageParts] = message.split(" ");
+      const privateMessage = privateMessageParts.join(" ");
+      
+      if (toUser && privateMessage) {
+        socket.emit("privateMessage", {
+          toUser,
+          message: privateMessage,
+          fromUser: userName
+        });
+        setMessage("");
+      } else {
+        alert("Utilisation : /msg pseudo message");
+      }
+      return;
+    }
+  
     if (message.startsWith("/createRoom")) {
       const room = message.split(" ")[1];
       if (room) {
         socket.emit("createRoom", room);
-        // Les autres utilisateurs devraient être informés de la création de la room
         setChat((prevChat) => [
           ...prevChat,
           { userName: "System", message: `Vous avez créé la room '${room}' !` },
