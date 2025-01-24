@@ -165,7 +165,36 @@ const setupSocket = (server) => {
       }
   });
   
-  
+  // Lorsqu'un utilisateur quitte une room
+socket.on("leaveRoom", (room) => {
+  if (!rooms[room]) {
+      socket.emit("error", { message: `La room ${room} n'existe pas.` });
+      return;
+  }
+
+  // Retirer l'utilisateur de la room
+  socket.leave(room);
+  rooms[room] = rooms[room].filter((id) => id !== socket.id);
+
+  console.log(`L'utilisateur ${socket.id} a quitté la room ${room}`);
+
+  // Notifier les autres utilisateurs de la room
+  io.to(room).emit("message", {
+      userName: "System",
+      message: `${userNames[socket.id] || "Un utilisateur"} a quitté la room.`,
+  });
+
+  // Mettre à jour la liste des utilisateurs pour les autres membres
+  const usersInRoom = rooms[room].map((id) => userNames[id] || id);
+  io.to(room).emit("updateUserList", usersInRoom);
+
+  // Supprimer la room si elle est vide
+  if (rooms[room].length === 0) {
+      delete rooms[room];
+      console.log(`La room ${room} a été supprimée car elle est vide.`);
+  }
+});
+
   
     // Déconnexion : retirer l'utilisateur de la room et des listes
     socket.on("disconnect", () => {
