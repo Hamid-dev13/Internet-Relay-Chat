@@ -239,92 +239,133 @@ const App = () => {
       alert("Veuillez entrer un pseudo valide.");
     }
   };
-
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>💬 Chat WebSocket</h1>
-
-      {!isNameSet ? (
-        <div>
-          <input
-            type="text"
-            value={userName}
-            onChange={(e) => setUserName(e.target.value)}
-            placeholder="Entrez votre pseudo"
-            style={{ width: "80%", marginRight: "10px" }}
-          />
-          <button onClick={handleUserName}>Confirmer le pseudo</button>
-        </div>
-      ) : (
-        <>
-          {isInRoom && (
-            <div>
-              <h3>Utilisateurs connectés dans {roomName} :</h3>
-              <div>
-                {usersConnected.map((user, index) => (
-                  <p key={index}>👤 {user}</p>
-                ))}
-              </div>
-            </div>
-          )}
-{showRoomList && (
-  <div className="overlay">
-    <div className="popup">
-      <button className="closeButton" onClick={() => setShowRoomList(false)}>✖</button>
-      <h3>Liste des salons</h3>
-      <ul>
-        {roomList.length > 0 ? (
-          roomList.map((room, index) => <li key={index}>{room}</li>)
-        ) : (
-          <li>Aucun salon rejoint.</li>
-        )}
-      </ul>
-    </div>
-  </div>
-)}
-          {!isInRoom ? (
-            <div>
+    <div className="bg-gradient-to-b from-gray-100 to-gray-200 min-h-screen flex flex-col items-center justify-center p-6 text-gray-800">
+      <div className="flex w-full max-w-6xl justify-between items-start">
+        {/* Section de chat */}
+        <div className="flex flex-col items-center w-3/4">
+          <h1 className="text-4xl font-bold mb-8">💬 Chat WebSocket</h1>
+  
+          {!isNameSet ? (
+            <div className="flex flex-col items-center space-y-4">
               <input
                 type="text"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Tapez /createRoom <nom> ou /joinRoom <nom>"
-                style={{ width: "80%", marginRight: "10px" }}
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                placeholder="Entrez votre pseudo"
+                className="w-80 p-3 border rounded-lg shadow-sm focus:ring focus:ring-blue-300"
               />
-              <button onClick={sendMessage}>Envoyer</button>
+              <button
+                onClick={handleUserName}
+                className="px-6 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600"
+              >
+                Confirmer le pseudo
+              </button>
             </div>
           ) : (
             <>
-              <div
-                style={{
-                  border: "1px solid #ccc",
-                  padding: "10px",
-                  height: "300px",
-                  overflowY: "scroll",
-                  marginBottom: "20px",
-                }}
-              >
-                {chat.map((msg, index) => (
-                  <p key={index}>
-                    <strong>{msg.userName}:</strong> {msg.message}
-                  </p>
-                ))}
-              </div>
-
-              <div>
-                <input
-                  type="text"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Tapez votre message"
-                  style={{ width: "80%", marginRight: "10px" }}
-                />
-                <button onClick={sendMessage}>Envoyer</button>
-              </div>
+              {isInRoom && (
+                <div className="bg-white rounded-lg shadow p-4 mb-6 w-full max-w-lg">
+                  <h3 className="text-lg font-semibold mb-2">
+                    Utilisateurs connectés dans <span className="text-blue-500">{roomName}</span> :
+                  </h3>
+                  <div className="space-y-1">
+                    {usersConnected.map((user, index) => (
+                      <p key={index} className="flex items-center">
+                        <span className="mr-2">👤</span> {user}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+  
+              {showRoomList && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                  <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
+                    <button
+                      onClick={() => setShowRoomList(false)}
+                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+                    >
+                      ✖
+                    </button>
+                    <h3 className="text-lg font-semibold mb-4">Liste des salons</h3>
+                    <ul className="space-y-2">
+                      {roomList.length > 0 ? (
+                        roomList.map((room, index) => (
+                          <li key={index} className="text-gray-600">
+                            {room}
+                          </li>
+                        ))
+                      ) : (
+                        <li className="text-gray-400">Aucun salon rejoint.</li>
+                      )}
+                    </ul>
+                  </div>
+                </div>
+              )}
+  
+              {!isInRoom ? (
+                <div className="flex flex-col items-center space-y-4">
+                  <input
+                    type="text"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Tapez /createRoom <nom> ou /joinRoom <nom>"
+                    className="w-80 p-3 border rounded-lg shadow-sm focus:ring focus:ring-blue-300"
+                  />
+                  <button
+                    onClick={sendMessage}
+                    className="px-6 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600"
+                  >
+                    Envoyer
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="bg-white rounded-lg shadow p-4 mb-6 w-full max-w-lg h-64 overflow-y-auto">
+                    {chat.map((msg, index) => (
+                      <p key={index} className="text-gray-600">
+                        <strong className="text-gray-800">{msg.userName}:</strong> {msg.message}
+                      </p>
+                    ))}
+                  </div>
+  
+                  <div className="flex flex-col items-center space-y-4">
+                    <input
+                      type="text"
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="Tapez votre message"
+                      className="w-80 p-3 border rounded-lg shadow-sm focus:ring focus:ring-blue-300"
+                    />
+                    <button
+                      onClick={sendMessage}
+                      className="px-6 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600"
+                    >
+                      Envoyer
+                    </button>
+                  </div>
+                </>
+              )}
             </>
           )}
-        </>
-      )}
+        </div>
+  
+        {/* Section des instructions à droite */}
+        <div className="w-1/4 p-6 bg-blue-50 rounded-lg shadow-lg ml-6">
+          <h2 className="text-2xl font-bold text-blue-600 mb-4">Bienvenue sur IRC Chat! 👋</h2>
+          <p className="text-gray-700 mb-4">Vous pouvez discuter avec vos amis ou des inconnus partout dans le monde ! Voici quelques commandes utiles :</p>
+          <ul className="list-disc pl-6 space-y-2 text-gray-700">
+            <li><span className="font-bold text-blue-500">/createRoom &lt;nom&gt;</span> : Crée un nouveau salon 🛠️</li>
+            <li><span className="font-bold text-blue-500">/joinRoom &lt;nom&gt;</span> : Rejoindre un salon 🎉</li>
+            <li><span className="font-bold text-blue-500">/roomList</span> : Voir la liste des salons 🏠</li>
+            <li><span className="font-bold text-blue-500">/msg </span> : Envoyer un message privé dans le salon 💌</li>
+            <li><span className="font-bold text-blue-500">/changePseudo &lt;pseudo&gt; </span> : Changer son pseudo</li>
+            <li><span className="font-bold text-blue-500">/leaveRoom &lt;room&gt; </span> : quitter la room</li>
+            <li><span className="font-bold text-blue-500">/deleteRoom &lt;room&gt; </span> : quitter la room</li>
+          </ul>
+        </div>
+      </div>
     </div>
   );
 };
