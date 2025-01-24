@@ -76,6 +76,7 @@ const App = () => {
   const sendMessage = () => {
     if (!message.trim()) return;
   
+    // Gestion de la commande /msg pour les messages privés
     if (message.startsWith("/msg")) {
       const [, toUser, ...privateMessageParts] = message.split(" ");
       const privateMessage = privateMessageParts.join(" ");
@@ -99,10 +100,10 @@ const App = () => {
       } else {
         alert("Utilisation : /msg pseudo message");
       }
-  
       return;
     }
   
+    // Gestion de la commande /createRoom pour créer une room
     if (message.startsWith("/createRoom")) {
       const room = message.split(" ")[1];
       if (room) {
@@ -121,6 +122,7 @@ const App = () => {
       return;
     }
   
+    // Gestion de la commande /joinRoom pour rejoindre une room
     if (message.startsWith("/joinRoom")) {
       const room = message.split(" ")[1];
       if (room) {
@@ -141,7 +143,7 @@ const App = () => {
       return;
     }
   
-    // Gestion de la commande /leaveRoom
+    // Gestion de la commande /leaveRoom pour quitter une room
     if (message.startsWith("/leaveRoom")) {
       if (isInRoom) {
         socket.emit("leaveRoom", roomName);
@@ -161,6 +163,27 @@ const App = () => {
       return;
     }
   
+    // Gestion de la commande /changePseudo pour changer de pseudo
+    if (message.startsWith("/changePseudo")) {
+      const newPseudo = message.split(" ")[1];
+      if (newPseudo) {
+        socket.emit("changePseudo", { oldPseudo: userName, newPseudo });
+        setUserName(newPseudo);
+        setChat((prevChat) => [
+          ...prevChat,
+          {
+            userName: "System",
+            message: `Votre pseudo a été changé en '${newPseudo}'.`,
+          },
+        ]);
+        setMessage("");
+      } else {
+        alert("Erreur : veuillez spécifier un nouveau pseudo.");
+      }
+      return;
+    }
+  
+    // Envoi de message standard dans une room
     if (isInRoom) {
       socket.emit("sendMessage", { room: roomName, message, userName });
       setMessage("");
@@ -168,6 +191,7 @@ const App = () => {
       alert("Veuillez rejoindre une room avant d'envoyer un message.");
     }
   };
+  
   
 
   const handleUserName = () => {
