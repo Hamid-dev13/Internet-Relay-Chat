@@ -11,9 +11,7 @@ const App = () => {
   const [usersConnected, setUsersConnected] = useState([]);
   const [roomList, setRoomList] = useState([]); // Liste des rooms
   const [showRoomList, setShowRoomList] = useState(false); // Contrôle de l'affichage
-  const [joinedRooms, setJoinedRooms] = useState([]); // Liste des rooms rejointes
-const [currentRoom, setCurrentRoom] = useState(null); // Room active
-
+  
   useEffect(() => {
     // Gestion des messages généraux
     socket.on("message", (data) => {
@@ -136,41 +134,26 @@ const [currentRoom, setCurrentRoom] = useState(null); // Room active
     }
     
   
-if (message.startsWith("/joinRoom")) {
-  const room = message.split(" ")[1];
-  if (room) {
-    // Ajouter la room à la liste des rooms rejointes si ce n'est pas déjà fait
-    if (!joinedRooms.includes(room)) {
-      setJoinedRooms((prevRooms) => [...prevRooms, room]);
+    // Gestion de la commande /joinRoom pour rejoindre une room
+    if (message.startsWith("/joinRoom")) {
+      const room = message.split(" ")[1];
+      if (room) {
+        socket.emit("joinRoom", room);
+        setRoomName(room);
+        setIsInRoom(true);
+        setChat((prevChat) => [
+          ...prevChat,
+          {
+            userName: "System",
+            message: `Vous avez rejoint la room '${room}' !`,
+          },
+        ]);
+        setMessage("");
+      } else {
+        alert("Erreur : veuillez spécifier une room à rejoindre.");
+      }
+      return;
     }
-
-    // Quitter la room actuelle (si existante) et rejoindre la nouvelle
-    if (currentRoom) {
-      socket.emit("leaveRoom", currentRoom);
-      setChat((prevChat) => [
-        ...prevChat,
-        {
-          userName: "System",
-          message: `Vous avez quitté la room '${currentRoom}'.`,
-        },
-      ]);
-    }
-
-    socket.emit("joinRoom", room);
-    setCurrentRoom(room);
-    setChat((prevChat) => [
-      ...prevChat,
-      {
-        userName: "System",
-        message: `Vous avez rejoint la room '${room}'.`,
-      },
-    ]);
-    setMessage("");
-  } else {
-    alert("Erreur : veuillez spécifier une room à rejoindre.");
-  }
-  return;
-}
     // Commande /deleteRoom pour supprimer une room
     if (message.startsWith("/deleteRoom")) {
       const room = message.split(" ")[1];
@@ -373,13 +356,13 @@ if (message.startsWith("/joinRoom")) {
           <h2 className="text-2xl font-bold text-blue-600 mb-4">Bienvenue sur IRC Chat! 👋</h2>
           <p className="text-gray-700 mb-4">Vous pouvez discuter avec vos amis ou des inconnus partout dans le monde ! Voici quelques commandes utiles :</p>
           <ul className="list-disc pl-6 space-y-2 text-gray-700">
-            <li><span className="font-bold text-blue-500">/createRoom &lt;nom&gt;</span> : Crée un nouveau salon 🛠️</li>
-            <li><span className="font-bold text-blue-500">/joinRoom &lt;nom&gt;</span> : Rejoindre un salon 🎉</li>
-            <li><span className="font-bold text-blue-500">/roomList</span> : Voir la liste des salons 🏠</li>
-            <li><span className="font-bold text-blue-500">/msg </span> : Envoyer un message privé dans le salon 💌</li>
-            <li><span className="font-bold text-blue-500">/changePseudo &lt;pseudo&gt; </span> : Changer son pseudo</li>
-            <li><span className="font-bold text-blue-500">/leaveRoom &lt;room&gt; </span> : quitter la room</li>
-            <li><span className="font-bold text-blue-500">/deleteRoom &lt;room&gt; </span> : quitter la room</li>
+            <ul><span className="font-bold text-blue-500">/createRoom &lt;nom&gt;</span> : Crée un nouveau salon 🛠️</ul>
+            <ul><span className="font-bold text-blue-500">/joinRoom &lt;nom&gt;</span> : Rejoindre un salon 🎉</ul>
+            <ul><span className="font-bold text-blue-500">/roomList</span> : Voir la liste des salons 🏠</ul>
+            <ul><span className="font-bold text-blue-500">/msg </span> : Envoyer un message privé dans le salon 💌</ul>
+            <ul><span className="font-bold text-blue-500">/changePseudo &lt;pseudo&gt; </span> : Changer son pseudo</ul>
+            <ul><span className="font-bold text-blue-500">/deleteRoom &lt;room&gt; </span> :delete la room</ul>
+            
           </ul>
         </div>
       </div>
