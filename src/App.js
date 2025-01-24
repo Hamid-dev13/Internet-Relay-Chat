@@ -11,7 +11,9 @@ const App = () => {
   const [usersConnected, setUsersConnected] = useState([]);
   const [roomList, setRoomList] = useState([]); // Liste des rooms
   const [showRoomList, setShowRoomList] = useState(false); // Contrôle de l'affichage
-  
+  const [joinedRooms, setJoinedRooms] = useState([]); // Liste des rooms rejointes
+const [currentRoom, setCurrentRoom] = useState(null); // Room active
+
   useEffect(() => {
     // Gestion des messages généraux
     socket.on("message", (data) => {
@@ -134,26 +136,41 @@ const App = () => {
     }
     
   
-    // Gestion de la commande /joinRoom pour rejoindre une room
-    if (message.startsWith("/joinRoom")) {
-      const room = message.split(" ")[1];
-      if (room) {
-        socket.emit("joinRoom", room);
-        setRoomName(room);
-        setIsInRoom(true);
-        setChat((prevChat) => [
-          ...prevChat,
-          {
-            userName: "System",
-            message: `Vous avez rejoint la room '${room}' !`,
-          },
-        ]);
-        setMessage("");
-      } else {
-        alert("Erreur : veuillez spécifier une room à rejoindre.");
-      }
-      return;
+if (message.startsWith("/joinRoom")) {
+  const room = message.split(" ")[1];
+  if (room) {
+    // Ajouter la room à la liste des rooms rejointes si ce n'est pas déjà fait
+    if (!joinedRooms.includes(room)) {
+      setJoinedRooms((prevRooms) => [...prevRooms, room]);
     }
+
+    // Quitter la room actuelle (si existante) et rejoindre la nouvelle
+    if (currentRoom) {
+      socket.emit("leaveRoom", currentRoom);
+      setChat((prevChat) => [
+        ...prevChat,
+        {
+          userName: "System",
+          message: `Vous avez quitté la room '${currentRoom}'.`,
+        },
+      ]);
+    }
+
+    socket.emit("joinRoom", room);
+    setCurrentRoom(room);
+    setChat((prevChat) => [
+      ...prevChat,
+      {
+        userName: "System",
+        message: `Vous avez rejoint la room '${room}'.`,
+      },
+    ]);
+    setMessage("");
+  } else {
+    alert("Erreur : veuillez spécifier une room à rejoindre.");
+  }
+  return;
+}
     // Commande /deleteRoom pour supprimer une room
     if (message.startsWith("/deleteRoom")) {
       const room = message.split(" ")[1];
