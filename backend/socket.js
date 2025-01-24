@@ -61,14 +61,19 @@ const setupSocket = (server) => {
 
     // Créer une room
     socket.on('createRoom', (room) => {
-      socket.join(room); // Ajoute le créateur de la room
-      if (!rooms[room]) {
-        rooms[room] = []; // Si la room n'existe pas, on l'initialise
+      if (rooms[room]) {
+        // Si la room existe déjà, renvoyer un message d'erreur
+        socket.emit('error', { message: `La room '${room}' existe déjà.` });
+      } else {
+        // Si la room n'existe pas, on l'ajoute
+        socket.join(room); // Ajoute le créateur de la room
+        rooms[room] = []; // Initialiser la room
+        rooms[room].push(socket.id); // Ajouter le créateur de la room
+        io.to(room).emit('roomCreated', room); // Envoie un message à tous les utilisateurs dans la room
+        io.to(room).emit('usersConnected', getUsersInRoom(room)); // Met à jour la liste des utilisateurs
       }
-      rooms[room].push(socket.id); // Ajouter le créateur de la room
-      io.to(room).emit('roomCreated', room); // Envoie un message à tous les utilisateurs dans la room
-      io.to(room).emit('usersConnected', getUsersInRoom(room)); // Met à jour la liste des utilisateurs
     });
+    
 
     // Rejoindre une room
     socket.on('joinRoom', (room) => {
@@ -110,7 +115,32 @@ const setupSocket = (server) => {
         message: data.message,
       });
     });
-
+    socket.on("getRoomList", (data, callback) => {
+      // Supposez que socket.rooms contient les rooms où l'utilisateur est présent
+      const userRooms = Array.from(socket.rooms).filter((room) => room !== socket.id);
+      callback(userRooms); // Retourne la liste des rooms via un callback
+    });
+    socket.on("deleteRoom", (roomName) => {
+      if (socket.rooms.has(roomName)) {
+        // Émet un message à tous les utilisateurs de la room avant de la supprimer
+        io.to(roomName).emit("roomDeleted", `La room '${roomName}' a été supprimée.`);
+    
+        // Quitter la room pour chaque utilisateur
+        socket.leave(roomName);
+    
+        // Supprimer la room côté serveur
+        delete io.sockets.adapter.rooms[roomName];
+    
+        console.log(`La room '${roomName}' a été supprimée.`);
+    
+        // Récupérer la liste actualisée des rooms et la renvoyer au client qui a demandé la suppression
+        const rooms = Array.from(io.sockets.adapter.rooms.keys());
+        socket.emit("updateRoomList", rooms);  // On envoie la nouvelle liste des rooms au client
+      } else {
+        console.log(`La room '${roomName}' n'existe pas ou vous n'êtes pas dans cette room.`);
+      }
+    });
+    
     socket.on("privateMessage", (data) => {
       const { toUser, message, fromUser } = data;
   

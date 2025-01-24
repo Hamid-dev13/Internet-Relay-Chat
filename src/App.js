@@ -9,7 +9,9 @@ const App = () => {
   const [userName, setUserName] = useState("");
   const [isNameSet, setIsNameSet] = useState(false);
   const [usersConnected, setUsersConnected] = useState([]);
-
+  const [roomList, setRoomList] = useState([]); // Liste des rooms
+  const [showRoomList, setShowRoomList] = useState(false); // Contrôle de l'affichage
+  
   useEffect(() => {
     // Gestion des messages généraux
     socket.on("message", (data) => {
@@ -102,25 +104,35 @@ const App = () => {
       }
       return;
     }
-  
-    // Gestion de la commande /createRoom pour créer une room
     if (message.startsWith("/createRoom")) {
-      const room = message.split(" ")[1];
+      const room = message.split(" ")[1]; // Récupère le nom de la room
+    
       if (room) {
+        // Émet l'événement pour créer la room
         socket.emit("createRoom", room);
-        setChat((prevChat) => [
-          ...prevChat,
-          {
-            userName: "System",
-            message: `Vous avez créé la room '${room}' !`,
-          },
-        ]);
-        setMessage("");
+    
+        // Écoute l'événement 'error' pour détecter si la room existe déjà
+        socket.on("error", (data) => {
+          alert(data.message); // Affiche un message d'erreur si la room existe déjà
+        });
+    
+        // Écoute l'événement 'roomCreated' et s'assure qu'il ne s'ajoute qu'une seule fois
+        socket.once("roomCreated", (room) => {  // Utilisation de `once` pour écouter une seule fois
+          setChat((prevChat) => [
+            ...prevChat,
+            {
+              userName: "System",
+              message: `Vous avez créé la room '${room}' !`,
+            },
+          ]);
+          setMessage(""); // Vide le champ de message
+        });
       } else {
         alert("Erreur : veuillez spécifier un nom pour la room.");
       }
       return;
     }
+    
   
     // Gestion de la commande /joinRoom pour rejoindre une room
     if (message.startsWith("/joinRoom")) {
@@ -142,7 +154,24 @@ const App = () => {
       }
       return;
     }
-  
+    // Commande /deleteRoom pour supprimer une room
+    if (message.startsWith("/deleteRoom")) {
+      const room = message.split(" ")[1];
+      if (room) {
+        socket.emit("deleteRoom", room); // Demande au serveur de supprimer la room
+        setChat((prevChat) => [
+          ...prevChat,
+          {
+            userName: "System",
+            message: `La room '${room}' a été supprimée.`,
+          },
+        ]);
+        setMessage("");
+      } else {
+        alert("Erreur : veuillez spécifier une room à supprimer.");
+      }
+      return;
+    }
     // Gestion de la commande /leaveRoom pour quitter une room
     if (message.startsWith("/leaveRoom")) {
       if (isInRoom) {
@@ -182,7 +211,15 @@ const App = () => {
       }
       return;
     }
-  
+    if (message.startsWith("/roomList")) {
+      socket.emit("getRoomList", {}, (rooms) => {
+        // Recevoir la liste des rooms depuis le serveur
+        setRoomList(rooms); // `rooms` est un tableau contenant les noms des rooms
+        setShowRoomList(true); // Afficher la fenêtre pop-up
+      });
+      setMessage("");
+      return;
+    }
     // Envoi de message standard dans une room
     if (isInRoom) {
       socket.emit("sendMessage", { room: roomName, message, userName });
@@ -230,7 +267,21 @@ const App = () => {
               </div>
             </div>
           )}
-
+{showRoomList && (
+  <div className="overlay">
+    <div className="popup">
+      <button className="closeButton" onClick={() => setShowRoomList(false)}>✖</button>
+      <h3>Liste des salons</h3>
+      <ul>
+        {roomList.length > 0 ? (
+          roomList.map((room, index) => <li key={index}>{room}</li>)
+        ) : (
+          <li>Aucun salon rejoint.</li>
+        )}
+      </ul>
+    </div>
+  </div>
+)}
           {!isInRoom ? (
             <div>
               <input
@@ -265,7 +316,7 @@ const App = () => {
                   type="text"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Tapez un message..."
+                  placeholder="Tapez votre message"
                   style={{ width: "80%", marginRight: "10px" }}
                 />
                 <button onClick={sendMessage}>Envoyer</button>
